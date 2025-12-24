@@ -1,0 +1,26 @@
+﻿@page "/books"
+@attribute [Authorize(AbpSolution1Permissions.Books.Default)]
+@using AbpSolution1.Permissions
+@using Volo.Abp.Application.Dtos
+@using Microsoft.AspNetCore.Authorization
+@using AbpSolution1.Books
+@using AbpSolution1.Localization
+@using Microsoft.Extensions.Localization
+@using Volo.Abp.AspNetCore.Components.Web
+@inject IStringLocalizer<AbpSolution1Resource> L
+@inject AbpBlazorMessageLocalizerHelper<AbpSolution1Resource> LH
+@inherits AbpCrudPageBase<IBookAppService, BookDto, Guid, PagedAndSortedResultRequestDto, CreateUpdateBookDto>
+
+
+@code
+{
+    public Books() // Constructor
+    {
+        CreatePolicyName = AbpSolution1Permissions.Books.Create;
+        UpdatePolicyName = AbpSolution1Permissions.Books.Edit;
+        DeletePolicyName = AbpSolution1Permissions.Books.Delete;
+
+        LocalizationResource = typeof(AbpSolution1Resource);
+    }
+}
+

@@ -1,0 +1,21 @@
+@page "/test-radzen"
+@using Radzen.Blazor
+
+<h3>Test Radzen Components</h3>
+
+<RadzenButton Text="Click me" ButtonStyle="ButtonStyle.Primary" Click="@(args => clicked = true)" />
+<RadzenCard>
+    <RadzenText TextStyle="TextStyle.H6">It Works!</RadzenText>
+    <RadzenText TextStyle="TextStyle.Body1">Radzen components are successfully integrated.</RadzenText>
+</RadzenCard>
+
+@if (clicked)
+{
+    <RadzenAlert AlertStyle="AlertStyle.Success" ShowIcon="true" Variant="Variant.Flat" Shade="Shade.Lighter">
+        Button clicked!
+    </RadzenAlert>
+}
+
+@code {
+    bool clicked = false;
+}

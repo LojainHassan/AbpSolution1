@@ -1,0 +1,33 @@
+@inject IJSRuntime JSRuntime
+
+<div id="@ContainerId" style="height: @Height; width: @Width; border: 1px solid #ccc;"></div>
+
+@code {
+    [Parameter] public string Height { get; set; } = "500px";
+    [Parameter] public string Width { get; set; } = "100%";
+    [Parameter] public string XmlContent { get; set; }
+
+    private string ContainerId { get; set; } = "bpmn-container-" + Guid.NewGuid();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("bpmnInterop.createModeler", ContainerId);
+            if (!string.IsNullOrEmpty(XmlContent))
+            {
+                await JSRuntime.InvokeVoidAsync("bpmnInterop.importXml", XmlContent);
+            }
+        }
+    }
+
+    public async Task LoadXmlAsync(string xml)
+    {
+         await JSRuntime.InvokeVoidAsync("bpmnInterop.importXml", xml);
+    }
+
+    public async Task<string> SaveXmlAsync()
+    {
+        return await JSRuntime.InvokeAsync<string>("bpmnInterop.saveXml");
+    }
+}
