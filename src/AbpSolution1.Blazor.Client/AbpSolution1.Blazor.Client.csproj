@@ -36,4 +36,8 @@
     <ProjectReference Include="..\..\src\AbpSolution1.HttpApi.Client\AbpSolution1.HttpApi.Client.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Components\Documents\" />
+  </ItemGroup>
+
 </Project>

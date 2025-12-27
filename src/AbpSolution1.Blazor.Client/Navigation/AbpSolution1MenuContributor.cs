@@ -73,13 +73,40 @@ public class AbpSolution1MenuContributor : IMenuContributor
 
         context.Menu.AddItem(bookStoreMenu);
 
-        //CHECK the PERMISSION
         if (await context.IsGrantedAsync(AbpSolution1Permissions.Books.Default))
         {
             bookStoreMenu.AddItem(new ApplicationMenuItem(
                 "BooksStore.Books",
                 l["Menu:Books"],
                 url: "/books"
+            ));
+        }
+
+        var documentManagementMenu = new ApplicationMenuItem(
+            "DocumentManagement",
+            l["Menu:DocumentManagement"],
+            icon: "fa fa-file-text"
+        );
+
+        context.Menu.AddItem(documentManagementMenu);
+
+        if (await context.IsGrantedAsync(AbpSolution1Permissions.WorkflowStatuses.Default))
+        {
+            documentManagementMenu.AddItem(new ApplicationMenuItem(
+                "DocumentManagement.WorkflowStatuses",
+                l["Menu:WorkflowStatuses"],
+                url: "/workflow-statuses",
+                icon: "fa fa-list-ul"
+            ));
+        }
+
+        if (await context.IsGrantedAsync(AbpSolution1Permissions.Documents.Default))
+        {
+            documentManagementMenu.AddItem(new ApplicationMenuItem(
+                "DocumentManagement.Documents",
+                l["Menu:Documents"],
+                url: "/documents",
+                icon: "fa fa-file-text-o"
             ));
         }
     }

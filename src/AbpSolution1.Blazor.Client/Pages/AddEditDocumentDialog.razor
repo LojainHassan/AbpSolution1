@@ -1,0 +1,130 @@
+@using AbpSolution1.Documents
+@using AbpSolution1.Localization
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<AbpSolution1Resource> L
+@inject DialogService DialogService
+@inject IDocumentAppService DocumentAppService
+@inject IWorkflowStatusAppService WorkflowStatusAppService
+@inject NotificationService NotificationService
+@using Volo.Abp.Users
+@inject ICurrentUser CurrentUser
+
+<RadzenTemplateForm TItem="DocumentDto" Data="@Document" Submit="@OnSubmit">
+    <div class="row">
+        <div class="col-md-12">
+            <RadzenFieldset Text="@L["DocumentInfo"]">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <RadzenLabel Text="@L["Document:DocumentNo"]" Component="DocumentNo" />
+                    </div>
+                    <div class="col-md-8">
+                        <RadzenTextBox style="width: 100%;" Name="DocumentNo" @bind-Value="@Document.DocumentNo" />
+                        <RadzenRequiredValidator Component="DocumentNo" Text="@L["Required"]" />
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <RadzenLabel Text="@L["Document:Code"]" Component="Code" />
+                    </div>
+                    <div class="col-md-8">
+                        <RadzenTextBox style="width: 100%;" Name="Code" @bind-Value="@Document.Code" />
+                        <RadzenRequiredValidator Component="Code" Text="@L["Required"]" />
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <RadzenLabel Text="@L["Document:NameAr"]" Component="NameAr" />
+                    </div>
+                    <div class="col-md-8">
+                        <RadzenTextBox style="width: 100%;" Name="NameAr" @bind-Value="@Document.NameAr" />
+                        <RadzenRequiredValidator Component="NameAr" Text="@L["Required"]" />
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <RadzenLabel Text="@L["Document:NameEn"]" Component="NameEn" />
+                    </div>
+                    <div class="col-md-8">
+                        <RadzenTextBox style="width: 100%;" Name="NameEn" @bind-Value="@Document.NameEn" />
+                        <RadzenRequiredValidator Component="NameEn" Text="@L["Required"]" />
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <RadzenLabel Text="@L["Document:WorkflowStatus"]" Component="WorkflowStatusId" />
+                    </div>
+                    <div class="col-md-8">
+                        <RadzenDropDown @bind-Value="@Document.WorkflowStatusId" Data="@WorkflowStatuses" TextProperty="NameEn" ValueProperty="Id" 
+                                        style="width: 100%;" Name="WorkflowStatusId" />
+                        <RadzenRequiredValidator Component="WorkflowStatusId" Text="@L["Required"]" DefaultValue="Guid.Empty" />
+                    </div>
+                </div>
+            </RadzenFieldset>
+        </div>
+    </div>
+    <div class="row mt-4">
+        <div class="col-md-12 text-end">
+            <RadzenButton ButtonType="Radzen.ButtonType.Submit" Text="@L["Save"]" Icon="save" ButtonStyle="ButtonStyle.Primary" />
+            <RadzenButton Text="@L["Cancel"]" Icon="cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => DialogService.Close(false))" class="ms-2" />
+        </div>
+    </div>
+</RadzenTemplateForm>
+
+@code {
+    [Parameter]
+    public DocumentDto Document { get; set; } = new();
+
+    IEnumerable<WorkflowStatusDto> WorkflowStatuses = new List<WorkflowStatusDto>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var result = await WorkflowStatusAppService.GetListAsync(new Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto { MaxResultCount = 1000 });
+            WorkflowStatuses = result.Items ?? new List<WorkflowStatusDto>();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = L["Error"], Detail = "Failed to load workflow statuses: " + ex.Message });
+            WorkflowStatuses = new List<WorkflowStatusDto>();
+        }
+    }
+
+    async Task OnSubmit(DocumentDto doc)
+    {
+        try
+        {
+            if (doc.Id == Guid.Empty)
+            {
+                await DocumentAppService.CreateAsync(new CreateUpdateDocumentDto
+                {
+                    Code = doc.Code,
+                    NameAr = doc.NameAr,
+                    NameEn = doc.NameEn,
+                    DocumentNo = doc.DocumentNo,
+                    WorkflowStatusId = doc.WorkflowStatusId,
+                    UserId = CurrentUser.Id ?? Guid.Empty
+                });
+            }
+            else
+            {
+                await DocumentAppService.UpdateAsync(doc.Id, new CreateUpdateDocumentDto
+                {
+                    Code = doc.Code,
+                    NameAr = doc.NameAr,
+                    NameEn = doc.NameEn,
+                    DocumentNo = doc.DocumentNo,
+                    WorkflowStatusId = doc.WorkflowStatusId,
+                    UserId = doc.UserId
+                });
+            }
+
+            DialogService.Close(true);
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = L["Save"], Detail = L["SuccessfullySaved"] });
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = L["Error"], Detail = ex.Message });
+        }
+    }
+}

@@ -12,7 +12,20 @@ public static class AbpSolution1Permissions
         public const string Edit = Default + ".Edit";
         public const string Delete = Default + ".Delete";
     }
-    
-    //Add your own permission names. Example:
-    //public const string MyPermission1 = GroupName + ".MyPermission1";
+
+    public static class WorkflowStatuses
+    {
+        public const string Default = GroupName + ".WorkflowStatuses";
+        public const string Create = Default + ".Create";
+        public const string Edit = Default + ".Edit";
+        public const string Delete = Default + ".Delete";
+    }
+
+    public static class Documents
+    {
+        public const string Default = GroupName + ".Documents";
+        public const string Create = Default + ".Create";
+        public const string Edit = Default + ".Edit";
+        public const string Delete = Default + ".Delete";
+    }
 }

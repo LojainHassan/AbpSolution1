@@ -1,0 +1,86 @@
+@using AbpSolution1.Documents
+@using AbpSolution1.Localization
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<AbpSolution1Resource> L
+@inject DialogService DialogService
+@inject IWorkflowStatusAppService WorkflowStatusAppService
+@inject NotificationService NotificationService
+
+<RadzenTemplateForm TItem="WorkflowStatusDto" Data="@WorkflowStatus" Submit="@OnSubmit">
+    <div class="row">
+        <div class="col-md-12">
+            <RadzenFieldset Text="@L["WorkflowStatusInfo"]">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <RadzenLabel Text="@L["WorkflowStatus:Code"]" Component="Code" />
+                    </div>
+                    <div class="col-md-8">
+                        <RadzenTextBox style="width: 100%;" Name="Code" @bind-Value="@WorkflowStatus.Code" />
+                        <RadzenRequiredValidator Component="Code" Text="@L["Required"]" />
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <RadzenLabel Text="@L["WorkflowStatus:NameAr"]" Component="NameAr" />
+                    </div>
+                    <div class="col-md-8">
+                        <RadzenTextBox style="width: 100%;" Name="NameAr" @bind-Value="@WorkflowStatus.NameAr" />
+                        <RadzenRequiredValidator Component="NameAr" Text="@L["Required"]" />
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <RadzenLabel Text="@L["WorkflowStatus:NameEn"]" Component="NameEn" />
+                    </div>
+                    <div class="col-md-8">
+                        <RadzenTextBox style="width: 100%;" Name="NameEn" @bind-Value="@WorkflowStatus.NameEn" />
+                        <RadzenRequiredValidator Component="NameEn" Text="@L["Required"]" />
+                    </div>
+                </div>
+            </RadzenFieldset>
+        </div>
+    </div>
+    <div class="row mt-4">
+        <div class="col-md-12 text-end">
+            <RadzenButton ButtonType="Radzen.ButtonType.Submit" Text="@L["Save"]" Icon="save" ButtonStyle="ButtonStyle.Primary" />
+            <RadzenButton Text="@L["Cancel"]" Icon="cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => DialogService.Close(false))" class="ms-2" />
+        </div>
+    </div>
+</RadzenTemplateForm>
+
+@code {
+    [Parameter]
+    public WorkflowStatusDto WorkflowStatus { get; set; } = new();
+
+    async Task OnSubmit(WorkflowStatusDto status)
+    {
+        try
+        {
+            if (status.Id == Guid.Empty)
+            {
+                await WorkflowStatusAppService.CreateAsync(new CreateUpdateWorkflowStatusDto
+                {
+                    Code = status.Code,
+                    NameAr = status.NameAr,
+                    NameEn = status.NameEn
+                });
+            }
+            else
+            {
+                await WorkflowStatusAppService.UpdateAsync(status.Id, new CreateUpdateWorkflowStatusDto
+                {
+                    Code = status.Code,
+                    NameAr = status.NameAr,
+                    NameEn = status.NameEn
+                });
+            }
+
+            DialogService.Close(true);
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = L["Save"], Detail = L["SuccessfullySaved"] });
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = L["Error"], Detail = ex.Message });
+        }
+    }
+}

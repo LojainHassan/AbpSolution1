@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
 using AbpSolution1.Books;
+using AbpSolution1.Documents;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
 using Volo.Abp.BlobStoring.Database.EntityFrameworkCore;
 using Volo.Abp.Data;
@@ -29,6 +30,8 @@ public class AbpSolution1DbContext :
     /* Add DbSet properties for your Aggregate Roots / Entities here. */
 
     public DbSet<Book> Books { get; set; }
+    public DbSet<Document> Documents { get; set; }
+    public DbSet<WorkflowStatus> WorkflowStatuses { get; set; }
 
     #region Entities from the modules
 
@@ -87,6 +90,28 @@ public class AbpSolution1DbContext :
                 AbpSolution1Consts.DbSchema);
             b.ConfigureByConvention(); //auto configure for the base class props
             b.Property(x => x.Name).IsRequired().HasMaxLength(128);
+        });
+
+        builder.Entity<WorkflowStatus>(b =>
+        {
+            b.ToTable(AbpSolution1Consts.DbTablePrefix + "WorkflowStatuses", AbpSolution1Consts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.NameAr).IsRequired().HasMaxLength(128);
+            b.Property(x => x.NameEn).IsRequired().HasMaxLength(128);
+            b.Property(x => x.Code).IsRequired().HasMaxLength(32);
+        });
+
+        builder.Entity<Document>(b =>
+        {
+            b.ToTable(AbpSolution1Consts.DbTablePrefix + "Documents", AbpSolution1Consts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.NameAr).IsRequired().HasMaxLength(128);
+            b.Property(x => x.NameEn).IsRequired().HasMaxLength(128);
+            b.Property(x => x.Code).HasMaxLength(32);
+            b.Property(x => x.DocumentNo).IsRequired().HasMaxLength(64);
+            
+            b.HasOne<WorkflowStatus>().WithMany().HasForeignKey(x => x.WorkflowStatusId).IsRequired();
+            b.HasOne<IdentityUser>().WithMany().HasForeignKey(x => x.UserId).IsRequired();
         });
         
         /* Configure your own tables/entities inside here */

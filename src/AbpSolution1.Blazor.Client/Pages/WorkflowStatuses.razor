@@ -1,0 +1,140 @@
+@page "/workflow-statuses"
+@using AbpSolution1.Documents
+@using AbpSolution1.Localization
+@using Volo.Abp.Application.Dtos
+@using Microsoft.AspNetCore.Authorization
+@using AbpSolution1.Permissions
+@using Microsoft.Extensions.Localization
+@using Radzen
+@using Radzen.Blazor
+@attribute [Authorize(AbpSolution1Permissions.WorkflowStatuses.Default)]
+@inject IWorkflowStatusAppService WorkflowStatusAppService
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+@inject IStringLocalizer<AbpSolution1Resource> L
+@inject IAuthorizationService AuthorizationService
+
+<div class="container-fluid py-4">
+    <div class="row mb-4 align-items-center">
+        <div class="col">
+            <h1 class="display-5 fw-bold text-primary mb-0">
+                <RadzenIcon Icon="assignment_turned_in" Style="font-size: 2.5rem; margin-right: 1rem; vertical-align: middle;" />
+                @L["Menu:WorkflowStatuses"]
+            </h1>
+        </div>
+        <div class="col-auto">
+            @if (CanCreate)
+            {
+                <RadzenButton Click=@(() => EditWorkflowStatus(new WorkflowStatusDto())) 
+                              Text="@L["NewWorkflowStatus"]" 
+                              Icon="add_circle" 
+                              ButtonStyle="ButtonStyle.Primary" 
+                              Size="ButtonSize.Large"
+                              class="shadow-sm border-0" 
+                              Style="background: linear-gradient(45deg, #4e73df 0%, #224abe 100%);" />
+            }
+        </div>
+    </div>
+
+    <RadzenCard class="shadow-sm border-0 overflow-hidden" Style="border-radius: 12px;">
+        <RadzenDataGrid @ref="grid" AllowFiltering="true" AllowPaging="true" PageSize="10"
+                        AllowSorting="true" Data="@workflowStatuses" TItem="WorkflowStatusDto" ColumnWidth="150px"
+                        SelectionMode="Radzen.DataGridSelectionMode.Single" class="radzen-grid-fancy">
+            <Columns>
+                <RadzenDataGridColumn TItem="WorkflowStatusDto" Property="Code" Title="@L["WorkflowStatus:Code"]" Frozen="true" />
+                <RadzenDataGridColumn TItem="WorkflowStatusDto" Property="NameAr" Title="@L["WorkflowStatus:NameAr"]" />
+                <RadzenDataGridColumn TItem="WorkflowStatusDto" Property="NameEn" Title="@L["WorkflowStatus:NameEn"]" />
+                <RadzenDataGridColumn TItem="WorkflowStatusDto" Context="status" Filterable="false" Sortable="false" TextAlign="TextAlign.Right" Width="120px">
+                    <Template Context="status">
+                        <div class="d-flex justify-content-end gap-2">
+                            @if (CanEdit)
+                            {
+                                <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium" 
+                                              Click="@(() => EditWorkflowStatus(status))" @onclick:stopPropagation="true" />
+                            }
+                            @if (CanDelete)
+                            {
+                                <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Flat" Size="ButtonSize.Medium" 
+                                              Click="@(() => DeleteWorkflowStatus(status))" @onclick:stopPropagation="true" />
+                            }
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    </RadzenCard>
+</div>
+
+<style>
+    .radzen-grid-fancy .rz-datatable-thead th {
+        background-color: #f8f9fc !important;
+        color: #4e73df !important;
+        font-weight: 700 !important;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.05rem;
+    }
+    .radzen-grid-fancy .rz-data-row:hover {
+        background-color: #f1f3f9 !important;
+        cursor: pointer;
+    }
+    .radzen-grid-fancy .rz-cell-data {
+        padding: 0.75rem 1rem !important;
+    }
+</style>
+
+@code {
+    RadzenDataGrid<WorkflowStatusDto> grid;
+    IEnumerable<WorkflowStatusDto> workflowStatuses;
+    
+    bool CanCreate { get; set; }
+    bool CanEdit { get; set; }
+    bool CanDelete { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+        
+        CanCreate = await AuthorizationService.IsGrantedAsync(AbpSolution1Permissions.WorkflowStatuses.Create);
+        CanEdit = await AuthorizationService.IsGrantedAsync(AbpSolution1Permissions.WorkflowStatuses.Edit);
+        CanDelete = await AuthorizationService.IsGrantedAsync(AbpSolution1Permissions.WorkflowStatuses.Delete);
+    }
+
+    async Task LoadData()
+    {
+        var result = await WorkflowStatusAppService.GetListAsync(new PagedAndSortedResultRequestDto { MaxResultCount = 1000 });
+        workflowStatuses = result.Items;
+    }
+
+    async Task EditWorkflowStatus(WorkflowStatusDto status)
+    {
+        var result = await DialogService.OpenAsync<AddEditWorkflowStatusDialog>(
+            status.Id == Guid.Empty ? L["NewWorkflowStatus"] : L["EditWorkflowStatus"],
+            new Dictionary<string, object> { { "WorkflowStatus", status } },
+            new DialogOptions() { Width = "600px", Resizable = true, Draggable = true }
+        );
+
+        if (result == true)
+        {
+            await LoadData();
+            await grid.Reload();
+        }
+    }
+
+    async Task DeleteWorkflowStatus(WorkflowStatusDto status)
+    {
+        var confirm = await DialogService.Confirm(
+            string.Format(L["WorkflowStatusDeletionConfirmationMessage"], status.NameEn),
+            L["AreYouSure"],
+            new ConfirmOptions() { OkButtonText = L["Delete"], CancelButtonText = L["Close"] }
+        );
+
+        if (confirm == true)
+        {
+            await WorkflowStatusAppService.DeleteAsync(status.Id);
+            await LoadData();
+            await grid.Reload();
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = L["Delete"], Detail = L["SuccessfullyDeleted"] });
+        }
+    }
+}

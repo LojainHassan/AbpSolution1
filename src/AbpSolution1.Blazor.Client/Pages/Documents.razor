@@ -1,0 +1,154 @@
+@page "/documents"
+@using AbpSolution1.Documents
+@using AbpSolution1.Localization
+@using Volo.Abp.Application.Dtos
+@using Microsoft.AspNetCore.Authorization
+@using AbpSolution1.Permissions
+@using Microsoft.Extensions.Localization
+@using Radzen
+@using Radzen.Blazor
+@attribute [Authorize(AbpSolution1Permissions.Documents.Default)]
+@inject IDocumentAppService DocumentAppService
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+@inject IStringLocalizer<AbpSolution1Resource> L
+@inject IAuthorizationService AuthorizationService
+
+<div class="container-fluid py-4">
+    <div class="row mb-4 align-items-center">
+        <div class="col">
+            <h1 class="display-5 fw-bold text-success mb-0">
+                <RadzenIcon Icon="description" Style="font-size: 2.5rem; margin-right: 1rem; vertical-align: middle;" />
+                @L["Menu:Documents"]
+            </h1>
+        </div>
+        <div class="col-auto">
+            @if (CanCreate)
+            {
+                <RadzenButton Click=@(() => EditDocument(new DocumentDto())) 
+                              Text="@L["NewDocument"]" 
+                              Icon="add_circle" 
+                              ButtonStyle="ButtonStyle.Success" 
+                              Size="ButtonSize.Large"
+                              class="shadow-sm border-0" 
+                              Style="background: linear-gradient(45deg, #1cc88a 0%, #13855c 100%);" />
+            }
+        </div>
+    </div>
+
+    <RadzenCard class="shadow-sm border-0 overflow-hidden" Style="border-radius: 12px;">
+        <RadzenDataGrid @ref="grid" AllowFiltering="true"  AllowPaging="true" PageSize="10"
+                        AllowSorting="true" Data="@documents" TItem="DocumentDto" ColumnWidth="150px" 
+                        SelectionMode="Radzen.DataGridSelectionMode.Single" class="radzen-grid-fancy">
+            <Columns>
+                <RadzenDataGridColumn TItem="DocumentDto" Property="DocumentNo" Title="@L["Document:DocumentNo"]" Frozen="true">
+                    <Template Context="data">
+                        <span class="badge bg-light text-dark font-monospace p-2 border">@data.DocumentNo</span>
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="DocumentDto" Property="NameAr" Title="@L["Document:NameAr"]" />
+                <RadzenDataGridColumn TItem="DocumentDto" Property="NameEn" Title="@L["Document:NameEn"]" />
+                <RadzenDataGridColumn TItem="DocumentDto" Property="Code" Title="@L["Document:Code"]" />
+                <RadzenDataGridColumn TItem="DocumentDto" Property="WorkflowStatusName" Title="@L["Document:WorkflowStatus"]">
+                    <Template Context="data">
+                        <RadzenBadge BadgeStyle="BadgeStyle.Info" Text="@data.WorkflowStatusName" class="rounded-pill px-3" />
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="DocumentDto" Property="UserName" Title="@L["Document:User"]" />
+                <RadzenDataGridColumn TItem="DocumentDto" Context="doc" Filterable="false" Sortable="false" TextAlign="TextAlign.Right" Width="120px">
+                    <Template Context="doc">
+                        <div class="d-flex justify-content-end gap-2">
+                            @if (CanEdit)
+                            {
+                                <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium" 
+                                              Click="@(() => EditDocument(doc))" @onclick:stopPropagation="true" />
+                            }
+                            @if (CanDelete)
+                            {
+                                <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Flat" Size="ButtonSize.Medium" 
+                                              Click="@(() => DeleteDocument(doc))" @onclick:stopPropagation="true" />
+                            }
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    </RadzenCard>
+</div>
+
+<style>
+    .radzen-grid-fancy .rz-datatable-thead th {
+        background-color: #f8f9fc !important;
+        color: #1cc88a !important;
+        font-weight: 700 !important;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.05rem;
+    }
+    .radzen-grid-fancy .rz-data-row:hover {
+        background-color: #f1fef9 !important;
+        cursor: pointer;
+    }
+    .radzen-grid-fancy .rz-cell-data {
+        padding: 0.75rem 1rem !important;
+    }
+</style>
+
+@code {
+    RadzenDataGrid<DocumentDto> grid;
+    IEnumerable<DocumentDto> documents;
+    
+    bool CanCreate { get; set; }
+    bool CanEdit { get; set; }
+    bool CanDelete { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+        
+        CanCreate = await AuthorizationService.IsGrantedAsync(AbpSolution1Permissions.Documents.Create);
+        CanEdit = await AuthorizationService.IsGrantedAsync(AbpSolution1Permissions.Documents.Edit);
+        CanDelete = await AuthorizationService.IsGrantedAsync(AbpSolution1Permissions.Documents.Delete);
+    }
+
+    async Task LoadData()
+    {
+        var result = await DocumentAppService.GetListAsync(new PagedAndSortedResultRequestDto { MaxResultCount = 1000 });
+        if (result.Items != null)
+  documents = result.Items;
+  else
+            documents = new List<DocumentDto>();
+    }
+
+    async Task EditDocument(DocumentDto document)
+    {
+        var result = await DialogService.OpenAsync<AddEditDocumentDialog>(
+            document.Id == Guid.Empty ? L["NewDocument"] : L["EditDocument"],
+            new Dictionary<string, object> { { "Document", document } },
+            new DialogOptions() { Width = "700px", Resizable = true, Draggable = true }
+        );
+
+        if (result == true)
+        {
+            await LoadData();
+            await grid.Reload();
+        }
+    }
+
+    async Task DeleteDocument(DocumentDto document)
+    {
+        var confirm = await DialogService.Confirm(
+            string.Format(L["DocumentDeletionConfirmationMessage"], document.NameEn),
+            L["AreYouSure"],
+            new ConfirmOptions() { OkButtonText = L["Delete"], CancelButtonText = L["Close"] }
+        );
+
+        if (confirm == true)
+        {
+            await DocumentAppService.DeleteAsync(document.Id);
+            await LoadData();
+            await grid.Reload();
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = L["Delete"], Detail = L["SuccessfullyDeleted"] });
+        }
+    }
+}
